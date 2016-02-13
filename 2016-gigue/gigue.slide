@@ -1,0 +1,232 @@
+Gigue
+minimal scheme interpriter written in Go - #shibuyago
+19:30 16 Feb 2016
+Tags: #shibuyago
+
+Kenta SUZUKI
+Gopher at VOYAGE GROUP
+@suzu_v
+https://github.com/suzuken
+
+* 2年ほど前にSICPを読みました。いい本です。
+
+.image https://mitpress.mit.edu/sicp/full-text/book/cover.jpg
+
+* 30秒でわかるScheme
+
+    (define x 1)
+    (define y 2)
+    (+ x y)
+    => 3
+    (define (sum s1 s2) (+ s1 s2))
+    (sum x y)
+    => 3
+    (car (cons 1 2))
+    => 1
+    (cdr (cons 1 2))
+    => 2
+    (cdr (list 1 2 3))
+    => (2 3)
+    (define (fib n) (if (<= n 2) 1 (+ (fib (- n 1)) (fib (- n 2)))))
+    (fib 10)
+    => 55
+
+.link http://milkpot.sakura.ne.jp/scheme/r7rs.html 参考: R7RS 日本語訳
+
+* 超循環評価器
+
+- SICP 4章のはじめ。SchemeでSchemeインタプリタを実装します。
+
+    (define (eval exp env)
+      (cond ((self-evaluating? exp) exp)
+            ((variable? exp) (lookup-variable-value exp env))
+            ((quoted? exp) (text-of-quotation exp))
+            ...
+
+    (define (apply procedure arguments)
+      (cond ((primitive-procedure? procedure)
+             (apply-primitive-procedure procedure arguments))
+            ((compound-procedure? procedure)
+            (else
+            ...
+
+- GoでSchemeを実装したら楽しいかも、と思いつきました。
+
+.link http://sicp.iijlab.net/fulltext/x410.html
+.link https://github.com/suzuken/sicp/blob/master/chapter4/q4.13.scm
+
+* Gigue: Goで書かれた（小さな）Schemeのインタプリタ
+
+Schemeの仕様は思ったより大きい（と後から気がついた・・）ので、Schemeの仕様のほんの少しだけ実装した小さなSchemeインタプリタです。
+
+インストール
+
+	go get -u github.com/suzuken/gigue
+
+REPLも動きます。
+
+	-> % ./gigue
+	> (define x 1)
+	> (define y 2)
+	> (+ x y)
+	3
+
+Goの標準ライブラリのみを利用して実装しています。GCもありませんし、末尾再帰最適化もされてませんし、サポートしていない機能や構文もたくさんあります、とりあえず動きます。
+
+* Gigue: サポートされている演算子・特殊形式
+
+- `+`, `-`, `*`, `/`
+- `cons`, `car`, `cdr`, `list`, `cadr`, `cdar`, `cddr`, `caaar`, `caddr`, `cdadr`, `cddar`, `cdddr`
+- `<`, `>`, `<=`, `>=`
+- `define`, `lambda`, `if`, `cond`, `begin`
+- `null?`, `list?`, `symbol?`, `string?`, `eq?`
+- `load`
+
+* Internal
+
+- Lexer
+- Parser
+- Eval / Apply
+
+* Lexer: 字句解析器
+
+- 入力からトークンを作ります。
+
+    (print 1) -> (,print,1,)
+    (define x 1)\n(print x) -> (,define,x,1,),(,print,x,)
+
+- Scan() を再帰的に呼び、トークンを作ります。
+- トークンとして扱いたいもの、例えば #t, #f (boolean) などは1つのトークンとして扱います。
+- コメント行の扱いなどもここでやります。
+
+* Lexer: Internal
+
+- ものすごくシンプルにやるならstrings.Split() などを使っても良いでしょう。
+- 今回は text/scanner を使っています。 [[https://golang.org/pkg/text/scanner/]]
+- text/scanner ではModeを変更することができ、認識するトークンを変えることができます。
+
+    type Lex struct {
+        *scanner.Scanner
+        Token rune
+    }
+
+    func New(r io.Reader) *Lex {
+        var s scanner.Scanner
+        s.Init(r)
+        s.Mode &^= scanner.ScanChars | scanner.ScanRawStrings
+        return &Lex{
+            Scanner: &s,
+        }
+    }
+
+
+* Parser
+
+- Lexerからの入力を受け取り、AST (抽象構文木)を出力します。
+- 簡単のため、Gigueでは `[]types.Expression` を出力するようにしています。
+
+つまり例えばこの入力を、
+
+    (define (square x) (* x x))
+
+以下の抽象構文木に変換するということをしています。
+
+    []types.Expression{
+        types.Symbol("define"),
+        []types.Expression{
+            types.Symbol("square"),
+            types.Symbol("x"),
+        },
+        []types.Expression{
+            types.Symbol("*"),
+            types.Symbol("x"),
+            types.Symbol("x"),
+        },
+    }
+
+.link https://golang.org/src/go/parser/parser.go Go implements its parser in Go
+
+* types.Expression ?
+
+    package types
+
+    // Expression is S-expression
+    type Expression interface{}
+
+- 余談ですが、SchemeでSchemeインタプリタを実装するとそもそもLexerとParserを実装する必要がありません。（リストをそのまま読めばいいのです。）
+- そういう意味でも超循環評価器をSchemeで書くというのは良い教材だなぁと思います。
+- ということでGigueでも、 `interface{}` でいいかなとなりました。
+
+* eval / apply
+
+大まかに動作の流れの例を紹介します。
+
+- (define (sum x y) (+ x y)) を受け取り、環境にsumのlambdaを追加する。 (eval)
+- 次に、 (sum 1 2) を受け取る。環境からsumを見つける。これの評価のため、新しい環境で評価させる。 (eval)
+- sumを評価するための環境を作り、引数を作用させる。 (apply)
+- applyされた結果 3 を受け取る。これを返す。 (eval)
+
+つまり、
+
+- evalは引数として式と環境をとる。式を展開していってapplyできる形に変換する。
+- applyは引数として手続きと、手続きを作用させる引数のリストをとる。評価のための環境を作り、作用させる。
+
+これを繰り返して、式を簡約していき、最終的に記号や基本手続きにたどり着きます。
+
+* 環境の実装
+
+    type Frame map[types.Symbol]types.Expression
+
+    type Env struct {
+        sync.RWMutex
+        m      Frame // m is symbol table for expression
+        parent *Env  // parent is parent Environment. Env is nested.
+    }
+
+    func (e *Env) Get(s types.Symbol) (types.Expression, error)
+    func (e *Env) Put(s types.Symbol, exp types.Expression)
+    func (e *Env) Remove(s types.Symbol)
+    func (e *Env) Extend(frame Frame)
+
+- 環境はnestしています。
+- シンボルのテーブルはシンプルに `map[string]interface{}` にしています。
+
+.link https://github.com/suzuken/gigue/blob/master/eval/env.go
+
+* applyの実装
+
+    func Apply(procedure types.Expression, args []types.Expression) (types.Expression, error) {
+        switch p := procedure.(type) {
+        case Lambda:
+            env := &Env{m: make(Frame), parent: p.Env}
+            env.Setup()
+            switch lambdaArgs := p.Args.(type) {
+            case []types.Expression:
+                //...
+                for i, arg := range lambdaArgs {
+                    env.Put(arg.(types.Symbol), args[i])
+                }
+            default:
+                env.Put(lambdaArgs.(types.Symbol), lambdaArgs)
+            }
+            return Eval(p.Body, env)
+        case func(...types.Expression) (types.Expression, error):
+            // primitive procedure
+            return p(args...)
+        default:
+            return nil, fmt.Errorf("unknown procedure type -- %v", procedure)
+        }
+    }
+
+* まとめ
+
+- Goで小さなSchemeインタプリタを実装しました。 [[https://github.com/suzuken/gigue]]
+- Goで処理系を書くと案外すっきり書けるのでおすすめです。
+- もしよかったらforkして遊んでみてください。
+
+* 参考資料
+
+.link http://qiita.com/suzuken/items/a251c1b6da31055cc628 Goで小さなScheme、Gigueを実装しました
+.link https://golang.org/pkg/text/scanner/
+.link https://www.youtube.com/watch?v=HxaD_trXwRE Lexical Scanning in Go
+.link http://sicp.iijlab.net/fulltext/x410.html
