@@ -1,0 +1,49 @@
+How I code Go with Vim
+00:00 15 Aug 2016
+
+Kenta SUZUKI
+Software Engineer at VOYAGE GROUP
+@suzu_v
+https://github.com/suzuken
+
+* Introduction
+
+Goの静的解析やコーディングのための補助ツールはGoで書かれています。エディタによる違いはあれど、たいてい同じように扱えます。
+
+.link https://github.com/fatih/vim-go
+
+and
+
+`:GoInstallBinaries`
+
+デモします。
+
+* よくつかうもの
+
+.link https://golang.org/cmd/gofmt/
+.link https://godoc.org/golang.org/x/tools/cmd/goimports
+.link https://godoc.org/golang.org/x/tools/cmd/guru
+.link https://github.com/rogpeppe/godef
+.link https://github.com/nsf/gocode
+
+- go test, golint, go build etc.
+
+デモします。
+
+* Tips
+
+.link https://github.com/ctrlpvim/ctrlp.vim
+.link https://github.com/motemen/ghq
+.link https://github.com/mattn/ctrlp-ghq
+.link https://github.com/peco/peco
+.link http://blog.kentarok.org/entry/2014/06/03/135300
+.link http://suzuken.hatenablog.jp/entry/2015/04/07/134847
+
+デモします。
+
+* vimrc
+
+一気にコピーせず、自分で書いてみるのがおすすめです
+
+.link https://github.com/suzuken/dotfiles
+.link https://github.com/suzuken/dotfiles/blob/master/vimrc
