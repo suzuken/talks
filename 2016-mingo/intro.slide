@@ -1,0 +1,124 @@
+みんGoリリースパーティー
+http://connpass.com/event/39794/ - #みんGo
+19:30 16 Sep 2016
+Tags: #みんGo
+
+Kenta SUZUKI
+Gopher at VOYAGE GROUP
+@suzu_v
+https://github.com/suzuken
+
+* この資料について
+
+公開されています。
+
+.link https://github.com/suzuken/talks
+.link http://go-talks.appspot.com/github.com/suzuken/talks/2016-mingo/intro.slide
+
+
+* 祝: みんなのGo言語 発売しました！👏👏👏
+
+.image http://image.gihyo.co.jp/assets/images/cover/2016/9784774183923.jpg
+
+.link http://gihyo.jp/book/2016/978-4-7741-8392-3 みんなのGo言語
+
+* 内容
+
+- 第1章 Goによるチーム開発のはじめ方とコードを書く上での心得 (songmu)
+- 第2章 マルチプラットフォームで動作する社内ツールのつくり方  (mattn)
+- 第3章 実用的なアプリケーションを作るために (fujiwara)
+- 第4章 コマンドラインツールを作る (deeeet)
+- 第5章 The Dark Arts Of Reflection (lestrrat)
+- 第6章 Goのテストに関するツールセット (suzuken)
+
+* みなさんのブログ: ありがとうございます！
+
+.link https://medium.com/@timakin/%E3%81%BF%E3%82%93%E3%81%AA%E3%81%AEgo%E8%A8%80%E8%AA%9E-%E7%8F%BE%E5%A0%B4%E3%81%A7%E4%BD%BF%E3%81%88%E3%82%8B%E5%AE%9F%E8%B7%B5%E3%83%86%E3%82%AF%E3%83%8B%E3%83%83%E3%82%AF-%E8%AA%AD%E3%81%BF%E7%B5%82%E3%82%8F%E3%81%A3%E3%81%9F%E3%81%8C-%E8%89%AF%E3%81%8B%E3%81%A3%E3%81%9F%E3%81%A7%E3%81%99-d44ae281446a#.qc97tpc4d 『みんなのGo言語【現場で使える実践テクニック】』読み終わったが、良かったです。 – Medium
+.link https://hiroakis.com/blog/2016/09/13/%E3%81%BF%E3%82%93%E3%81%AA%E3%81%AEgo%E8%A8%80%E8%AA%9E%E3%82%92%E8%AA%AD%E3%82%93%E3%81%A0/ みんなのGo言語を読んだ | Ore no homepage
+.link http://ymmt.hatenablog.com/entry/2016/09/08/150106 「みんなの Go 言語」は忙しいプログラマこそ読むべき本 - はざまブログ
+.link http://motemen.hatenablog.com/entry/2016/09/beyond-the-tour-of-go A Tour of Go のその先: 『みんなのGo言語【現場で使える実践テクニック】』 - 詩と創作・思索のひろば
+.link http://mizkei.hatenablog.com/entry/2016/09/09/081617 現場で使える実践テクニック「みんなのGo言語」 - mizkeiのブログ
+.link http://blog.monochromegane.com/blog/2016/09/11/go-for-everyone/ 『みんなのGo言語【現場で使える実践テクニック】』をいただきました。 · THINKING MEGANE
+.link http://myfinder.hatenablog.com/entry/2016/09/08/231624 ひとりじゃなくてみんなで使うためのgolangの本 "みんなのGo言語" - まいんだーのはてなブログ
+.link http://tomi-ru.hatenablog.com/entry/2016/09/12/%E3%81%BF%E3%82%93go%E8%AA%AD%E3%82%93%E3%81%A0%EF%BC%81 みんGo読んだ！ - トミールの日記
+
+* 本の背景
+
+- 実際にGoを使っていて少しはまるところをまとめてみる
+- 言語の基礎がわかったのでもうちょっと実践的なことをしてみたい、という人に届ける
+- みんなにGoもっと書きたいな、と思ってもらう (๑•̀ㅂ•́)و✧
+
+* せっかくなのでGoのテストのあれこれをば
+
+- Goがシンプルなように、Goのテストもシンプル
+- 普通のGoコードでテストを書くことは、想像以上にシンプルです
+- テストをいい感じに書く方法を調べるには標準ライブラリのテストを読むといいです
+
+例えば
+
+.link https://golang.org/src/encoding/base64/base64_test.go
+
+* Go 1.7: Sub-Tests
+
+.code sample/sub_test.go /^func TestSum/,/^}/
+
+* Go 1.7: Sub-Tests
+
+    -> % go test -v ./sample
+    === RUN   TestSum
+    === RUN   TestSum/1+2
+    === RUN   TestSum/1+1
+    === RUN   TestSum/2+1
+    --- PASS: TestSum (0.00s)
+        --- PASS: TestSum/1+2 (0.00s)
+        --- PASS: TestSum/1+1 (0.00s)
+        --- PASS: TestSum/2+1 (0.00s)
+    PASS
+    ok      github.com/suzuken/talks/2016-mingo/sample      0.005s
+
+    -> % go test -v ./sample --run=/^1/
+    === RUN   TestSum
+    === RUN   TestSum/1+2
+    === RUN   TestSum/1+1
+    --- PASS: TestSum (0.00s)
+        --- PASS: TestSum/1+2 (0.00s)
+        --- PASS: TestSum/1+1 (0.00s)
+    PASS
+    ok      github.com/suzuken/talks/2016-mingo/sample      0.006s
+
+* Go 1.7: Sub-Benchmark
+
+.code sample/sub_test.go /^func BenchmarkX/,/^}/
+
+https://golang.org/pkg/testing/#B.Run
+
+    func (t *T) Run(name string, f func(t *T)) bool
+        Run runs f as a subtest of t called name. It reports whether f succeeded.
+        Run will block until all its parallel subtests have completed.
+
+
+* Go 1.7: Sub-Benchmark
+
+ベンチマークをテーブル駆動で書けるようになります。便利！
+
+.code sample/sub_test.go /^func BenchmarkConcatenate/,/^}/
+
+* Go 1.7: Sub-Benchmark
+
+    -> % go test -bench .
+    BenchmarkX/n=3-8                2000000000               0.00 ns/op
+    BenchmarkX/n=10-8               2000000000               0.00 ns/op
+    BenchmarkX/n=100-8              2000000000               0.00 ns/op
+    BenchmarkConcatenate/Cat3-8             10000000               167 ns/op         54 B/op           3 allocs/op
+    BenchmarkConcatenate/Buf3-8             10000000               188 ns/op        163 B/op           3 allocs/op
+    BenchmarkConcatenate/Cat100-8             300000              5983 ns/op       7392 B/op         100 allocs/op
+    BenchmarkConcatenate/Buf100-8            1000000              2258 ns/op       2032 B/op           4 allocs/op
+    BenchmarkConcatenate/Cat10000-8              200           7534832 ns/op   53168067 B/op       10000 allocs/op
+    BenchmarkConcatenate/Buf10000-8            10000            196046 ns/op     208608 B/op          11 allocs/op
+    PASS
+    ok      github.com/suzuken/talks/2016-mingo/sample      12.350s
+
+
+* まとめ
+
+- みんGo是非読んでみてください！
