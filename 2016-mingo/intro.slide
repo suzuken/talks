@@ -58,6 +58,8 @@ https://github.com/suzuken
 
 .link https://golang.org/src/encoding/base64/base64_test.go
 
+Go 1.7でサブテストとサブベンチマークが追加されたので紹介します。
+
 * Go 1.7: Sub-Tests
 
 .code sample/sub_test.go /^func TestSum/,/^}/
@@ -90,7 +92,7 @@ https://github.com/suzuken
 
 .code sample/sub_test.go /^func BenchmarkX/,/^}/
 
-https://golang.org/pkg/testing/#B.Run
+.link https://golang.org/pkg/testing/#B.Run
 
     func (t *T) Run(name string, f func(t *T)) bool
         Run runs f as a subtest of t called name. It reports whether f succeeded.
