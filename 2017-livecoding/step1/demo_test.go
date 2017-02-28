@@ -1,11 +1,7 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"strings"
-	"sync"
 	"testing"
 )
 
@@ -30,27 +26,6 @@ func TestExtract(t *testing.T) {
 	if desc != "test" {
 		t.Fatalf("want %s, got %s", "test", desc)
 	}
-}
-
-func dummyHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, htmlString)
-}
-
-func TestRace(t *testing.T) {
-	s := NewServer()
-	// dummy server
-	ts := httptest.NewServer(http.HandlerFunc(dummyHandler))
-	var wg sync.WaitGroup
-	for i := 0; i < 2; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if _, err := s.get(ts.URL); err != nil {
-				t.Errorf("get failted: %s", err)
-			}
-		}()
-	}
-	wg.Wait()
 }
 
 func BenchmarkExtract(b *testing.B) {

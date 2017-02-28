@@ -10,25 +10,9 @@ import (
 	"sync"
 )
 
-type server struct {
-	cache *cache
-}
-
-func NewServer() *server {
-	return &server{
-		cache: NewCache(),
-	}
-}
-
 type cache struct {
 	sync.RWMutex
 	m map[string]string
-}
-
-func NewCache() *cache {
-	return &cache{
-		m: make(map[string]string),
-	}
 }
 
 func (c *cache) Add(k, v string) {
@@ -41,6 +25,14 @@ func (c *cache) Get(k string) string {
 	defer c.RUnlock()
 	c.RLock()
 	return c.m[k]
+}
+
+var globalCache cache
+
+func init() {
+	globalCache = cache{
+		m: make(map[string]string),
+	}
 }
 
 var descRE = regexp.MustCompile(`<meta\s+name="description"\s+content="([^"]*)"\s*/>`)
@@ -57,8 +49,8 @@ func extract(r io.Reader) (string, error) {
 	return string(bb[1]), nil
 }
 
-func (s *server) get(rawurl string) (string, error) {
-	if d := s.cache.Get(rawurl); d != "" {
+func get(rawurl string) (string, error) {
+	if d := globalCache.Get(rawurl); d != "" {
 		return d, nil
 	}
 	resp, err := http.Get(rawurl)
@@ -70,17 +62,17 @@ func (s *server) get(rawurl string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	s.cache.Add(rawurl, desc)
+	globalCache.Add(rawurl, desc)
 	return desc, nil
 }
 
-func (s *server) handler(w http.ResponseWriter, r *http.Request) {
+func handler(w http.ResponseWriter, r *http.Request) {
 	rawurl := r.URL.Query().Get("url")
 	if rawurl == "" {
 		http.Error(w, "url required", http.StatusBadRequest)
 		return
 	}
-	desc, err := s.get(rawurl)
+	desc, err := get(rawurl)
 	if err != nil {
 		log.Printf("get error: %s", err)
 		http.Error(w, "not found", http.StatusInternalServerError)
@@ -90,8 +82,7 @@ func (s *server) handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	s := server{}
-	http.HandleFunc("/", s.handler)
+	http.HandleFunc("/", handler)
 	log.Print("http server start listening on :8080")
 	http.ListenAndServe(":8080", nil)
 }

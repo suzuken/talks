@@ -494,3 +494,276 @@ func main() {
 consider
 
 * how about retriving any other meta tag content ?
+
+## http server / race detection
+
+OK, let's create scraper as a service.
+
+```go
+func handler(w http.ResponseWriter, r *http.Request) {
+	rawurl := r.URL.Query().Get("url")
+	if rawurl == "" {
+		http.Error(w, "url required", http.StatusBadRequest)
+		return
+	}
+	desc, err := get(rawurl)
+	if err != nil {
+		log.Printf("get error: %s", err)
+		http.Error(w, "not found", http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w, desc)
+}
+
+func main() {
+	http.HandleFunc("/", handler)
+	log.Print("http server start listening on :8080")
+	http.ListenAndServe(":8080", nil)
+}
+```
+
+```
+-> % go run demo.go
+2017/02/28 14:29:07 http server start listening on :8080
+2017/02/28 14:29:08 get error: Get aaa: unsupported protocol scheme ""
+
+-> % curl "localhost:8080?url=https://voyagegroup.com"
+        ALL    IRニュース    プレスリリース    パブリシティ    勉強会/登壇情報                 経営理念創業時からの想い「SOUL」と、価値観で&hellip;%
+```
+
+It works fine. Once scraped, you can cache it.
+
+```go
+var cache map[string]string
+
+func init() {
+	cache = make(map[string]string)
+}
+
+func get(rawurl string) (string, error) {
+	if desc, ok := cache[rawurl]; ok {
+		return desc, nil
+	}
+	resp, err := http.Get(rawurl)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	desc, err := extract(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	cache[rawurl] = desc
+	return desc, nil
+}
+```
+
+It's safe? No. Go's map is not concurrent safe.
+
+    go test -race
+
+OK? Doesn't fail. Go's race detector has no false positive.
+Write concurren tests.
+
+
+```go
+func dummyHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, htmlString)
+}
+
+func TestRace(t *testing.T) {
+	// dummy server
+	ts := httptest.NewServer(http.HandlerFunc(dummyHandler))
+	var wg sync.WaitGroup
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, err := get(ts.URL); err != nil {
+				t.Errorf("get failted: %s", err)
+			}
+		}()
+	}
+	wg.Wait()
+}
+```
+
+it's failed.
+
+```
+-> % go test -race
+==================
+WARNING: DATA RACE
+Write at 0x00c42006f290 by goroutine 10:
+  runtime.mapassign()
+      /Users/ke-suzuki/src/github.com/golang/go/src/runtime/hashmap.go:485 +0x0
+  github.com/suzuken/talks/2017-livecoding.get()
+      /Users/ke-suzuki/src/github.com/suzuken/talks/2017-livecoding/demo.go:45 +0x22a
+  github.com/suzuken/talks/2017-livecoding.TestRace.func1()
+      /Users/ke-suzuki/src/github.com/suzuken/talks/2017-livecoding/demo_test.go:47 +0x83
+
+Previous write at 0x00c42006f290 by goroutine 9:
+  runtime.mapassign()
+      /Users/ke-suzuki/src/github.com/golang/go/src/runtime/hashmap.go:485 +0x0
+  github.com/suzuken/talks/2017-livecoding.get()
+      /Users/ke-suzuki/src/github.com/suzuken/talks/2017-livecoding/demo.go:45 +0x22a
+  github.com/suzuken/talks/2017-livecoding.TestRace.func1()
+      /Users/ke-suzuki/src/github.com/suzuken/talks/2017-livecoding/demo_test.go:47 +0x83
+
+Goroutine 10 (running) created at:
+  github.com/suzuken/talks/2017-livecoding.TestRace()
+      /Users/ke-suzuki/src/github.com/suzuken/talks/2017-livecoding/demo_test.go:45 +0xec
+  testing.tRunner()
+      /Users/ke-suzuki/src/github.com/golang/go/src/testing/testing.go:659 +0x10b
+
+Goroutine 9 (finished) created at:
+  github.com/suzuken/talks/2017-livecoding.TestRace()
+      /Users/ke-suzuki/src/github.com/suzuken/talks/2017-livecoding/demo_test.go:45 +0xec
+  testing.tRunner()
+      /Users/ke-suzuki/src/github.com/golang/go/src/testing/testing.go:659 +0x10b
+==================
+==================
+WARNING: DATA RACE
+Write at 0x00c4200c8f28 by goroutine 10:
+  github.com/suzuken/talks/2017-livecoding.get()
+      /Users/ke-suzuki/src/github.com/suzuken/talks/2017-livecoding/demo.go:45 +0x240
+  github.com/suzuken/talks/2017-livecoding.TestRace.func1()
+      /Users/ke-suzuki/src/github.com/suzuken/talks/2017-livecoding/demo_test.go:47 +0x83
+
+Previous write at 0x00c4200c8f28 by goroutine 9:
+  github.com/suzuken/talks/2017-livecoding.get()
+      /Users/ke-suzuki/src/github.com/suzuken/talks/2017-livecoding/demo.go:45 +0x240
+  github.com/suzuken/talks/2017-livecoding.TestRace.func1()
+      /Users/ke-suzuki/src/github.com/suzuken/talks/2017-livecoding/demo_test.go:47 +0x83
+
+Goroutine 10 (running) created at:
+  github.com/suzuken/talks/2017-livecoding.TestRace()
+      /Users/ke-suzuki/src/github.com/suzuken/talks/2017-livecoding/demo_test.go:45 +0xec
+  testing.tRunner()
+      /Users/ke-suzuki/src/github.com/golang/go/src/testing/testing.go:659 +0x10b
+
+Goroutine 9 (finished) created at:
+  github.com/suzuken/talks/2017-livecoding.TestRace()
+      /Users/ke-suzuki/src/github.com/suzuken/talks/2017-livecoding/demo_test.go:45 +0xec
+  testing.tRunner()
+      /Users/ke-suzuki/src/github.com/golang/go/src/testing/testing.go:659 +0x10b
+==================
+--- FAIL: TestRace (0.00s)
+        testing.go:612: race detected during execution of test
+FAIL
+exit status 1
+FAIL    github.com/suzuken/talks/2017-livecoding        0.022s
+
+```
+
+let's fix them.
+
+```go
+type cache struct {
+	sync.RWMutex
+	m map[string]string
+}
+
+func (c *cache) Add(k, v string) {
+	defer c.Unlock()
+	c.Lock()
+	c.m[k] = v
+}
+
+func (c *cache) Get(k string) string {
+	defer c.RUnlock()
+	c.RLock()
+	return c.m[k]
+}
+
+var globalCache cache
+
+func init() {
+	globalCache = cache{
+		m: make(map[string]string),
+	}
+}
+
+func get(rawurl string) (string, error) {
+	if d := globalCache.Get(rawurl); d != "" {
+		return d, nil
+	}
+	resp, err := http.Get(rawurl)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	desc, err := extract(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	globalCache.Add(rawurl, desc)
+	return desc, nil
+}
+```
+
+passed!
+
+```
+-> % go test -v -race
+=== RUN   TestExtract
+--- PASS: TestExtract (0.00s)
+=== RUN   TestRace
+--- PASS: TestRace (0.00s)
+PASS
+ok      github.com/suzuken/talks/2017-livecoding        1.024s
+```
+
+## refactor
+
+Next, avoid global variables `globalCache`.
+
+```go
+type server struct {
+	cache *cache
+}
+
+func NewServer() *server {
+	return &server{
+		cache: NewCache(),
+	}
+}
+
+func (s *server) get(rawurl string) (string, error) {
+	if d := s.cache.Get(rawurl); d != "" {
+		return d, nil
+	}
+	resp, err := http.Get(rawurl)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	desc, err := extract(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	s.cache.Add(rawurl, desc)
+	return desc, nil
+}
+
+func (s *server) handler(w http.ResponseWriter, r *http.Request) {
+    ///
+	desc, err := s.get(rawurl)
+    ///...
+}
+```
+
+and then,
+
+```
+-> % go test -v
+=== RUN   TestExtract
+--- PASS: TestExtract (0.00s)
+=== RUN   TestRace
+--- PASS: TestRace (0.00s)
+PASS
+ok      github.com/suzuken/talks/2017-livecoding        0.013s
+
+```
+
+passed!

@@ -16,9 +16,14 @@ https://github.com/suzuken
 
 * livecoding
 
-- scraper
-- profiling
+- Scraper
+- Profiling
+- Web API
 
 * benchmark
 
 .link https://blog.golang.org/profiling-go-programs
+
+* testing
+
+.link https://golang.org/doc/articles/race_detector.html

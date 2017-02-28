@@ -37,7 +37,6 @@ func dummyHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestRace(t *testing.T) {
-	s := NewServer()
 	// dummy server
 	ts := httptest.NewServer(http.HandlerFunc(dummyHandler))
 	var wg sync.WaitGroup
@@ -45,7 +44,7 @@ func TestRace(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if _, err := s.get(ts.URL); err != nil {
+			if _, err := get(ts.URL); err != nil {
 				t.Errorf("get failted: %s", err)
 			}
 		}()
