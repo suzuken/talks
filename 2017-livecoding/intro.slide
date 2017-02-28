@@ -1,0 +1,24 @@
+Goライブコーディング
+https://supporterz-seminar.connpass.com/event/49401/
+19:30 28 Feb 2017
+Tags: #ライブコーディング
+
+Kenta SUZUKI
+Gopher at VOYAGE GROUP
+@suzu_v
+https://github.com/suzuken
+
+* 去年 みんなのGo言語 という本を出しました
+
+.image http://image.gihyo.co.jp/assets/images/cover/2016/9784774183923.jpg
+
+.link http://gihyo.jp/book/2016/978-4-7741-8392-3 みんなのGo言語
+
+* livecoding
+
+- scraper
+- profiling
+
+* benchmark
+
+.link https://blog.golang.org/profiling-go-programs
