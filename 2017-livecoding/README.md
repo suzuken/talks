@@ -767,3 +767,7 @@ ok      github.com/suzuken/talks/2017-livecoding        0.013s
 ```
 
 passed!
+
+## consider..
+
+- when `<meta name="description"` commented, how does it works in `regexp` ?
