@@ -16,11 +16,17 @@ https://github.com/suzuken
 
 * livecoding
 
-- Scraper
-- Profiling
+- Scraper (meta: description)
+- testing and benchmark
+- profiling
+- optimization
 - Web API
 
-* testing and benchmark
+* tools
+
+.link https://golang.org/pkg/regexp/
+
+testing and benchmark
 
 .link https://golang.org/pkg/testing
 .link https://blog.golang.org/profiling-go-programs
