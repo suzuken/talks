@@ -1,0 +1,47 @@
+Go入門 2018(短縮版)
+https://supporterzcolab.com/event/333/
+20:00 22 Mar 2018
+
+Kenta SUZUKI
+Gopher at VOYAGE GROUP
+@suzu_v
+https://github.com/suzuken
+
+* Goの特徴
+
+- シンプルさ
+- 読みやすさ
+- 学習の手引き
+
+* シンプルさ
+
+- [[https://golang.org/ref/spec][短い言語仕様]]
+- 例: for
+- 例: goroutine, channel
+- 例: interface
+- シンプルさと簡潔さ
+- シンプルさはあとから足せない
+- シンプルな道具の使い方を知れば、だんだん簡単に書けるようになる
+
+.link http://chasen.org/~daiti-m/text/worse-is-better-ja.html デザインの「悪い方がよい」原則
+.link https://speakerdeck.com/twada/understanding-the-spiral-of-technologies 技術選定の審美眼
+.link https://ajito.fm/6/ ajitofm 6: Worse Is Better
+
+* 読みやすさ
+
+- コードは読まれる時間のほうが長い
+- [[https://github.com/golang/go/wiki/CodeReviewComments][Code Review Comments]]
+- [[http://ukai-go-talks.appspot.com/2014/gocon.slide][Goに入ってはGoに従え]]
+- コメントではなくExampleで [[https://blog.golang.org/examples][Testable Examples in Go]]
+
+* 学習の手引き
+
+- シンプルすぎる道具に最初は思える
+- 例: encoding/json [[https://blog.golang.org/json-and-go][JSON and Go]]
+- 知っている道具でも、さらに深く知るとよりよいコードが書ける
+- 例: zero value [[https://www.youtube.com/watch?v=ynoY2xz-F8s][GopherCon 2016: Francesc Campoy - Understanding nil]]
+- 例: nil map [[https://play.golang.org/p/8EK7rN7AyVq]]
+- [[https://www.youtube.com/watch?v=PAAkCSZUG1c][Go Proverbs]]
+- 標準ライブラリを読む
+
+.link https://suzuken.hatenablog.jp/entry/2017/07/21/121149 A Tour of Goを終えたあなたにおすすめのGoを勉強するためのリソース
