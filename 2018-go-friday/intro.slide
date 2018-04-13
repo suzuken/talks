@@ -1,0 +1,92 @@
+Go at fluct
+Go Friday at Mercari
+19:00 13 Apr 2018
+
+Kenta SUZUKI
+Gopher at VOYAGE GROUP
+@suzu_v
+https://github.com/suzuken
+
+* fluctとは
+
+fluct: [[https://corp.fluct.jp/service/publisher/ssp/]]
+
+- 様々な媒体様に広告配信するサービス
+
+大まかな仕事
+
+- 各プラットフォームで広告を表示するためのフロントエンド（Mobile App, Mobile Web, PC Web）
+- 広告配信結果を集計して表示するレポート機能
+- いい感じに配信比率を決定して収益性を高める仕組み
+- 各広告枠にいい感じに配信設定・管理する機能
+- 設定結果を反映し、広告表示のレスポンスを返し、ログを落とす配信サーバ
+
+.link https://www.slideshare.net/MasamichiIdeue/250-imps-fluct/8
+
+* fluct Technical Overview
+
+- マルチデータセンター（DC / AWS / GCP）
+- コンポーネントごとに異なる言語: PHP, Perl, Erlang, Ruby, Rust and Go
+- 管理系サービスはPHPの大きなモノリス + サブシステム
+- 配信系はもともとPHP, Perl, Erlang(RTB)で構築されていた。
+- 新規サービスは最近Goが増えている。
+
+* Goのユースケース
+
+* 例: Impressionサーバリプレース
+
+- 広告ログを落とすためのHTTPサーバ
+- いい感じにパラメータを復号し、解釈し、ログを出力する
+
+問題
+
+- PHP + apache handler (キャリア判定 + logging用)で書かれていて実行環境が作りづらい
+- かつ、どのリクエストがどのようなログを出力するのかテストしづらい
+- その結果、変更にネガティブになる（壊れるのが怖い）
+
+in Go
+
+- デプロイが容易に: apache handlerごとbuildしなくてよくなった
+- Testability++ Readability++ Throughput++
+- 内部データ暗号化のためのライブラリも分離して利用可能に
+
+* リプレース戦略
+
+リプレースのためのテストプロセスもGoでいい感じに。
+
+- PHP版サービスとGo版サービスをDockerで立ち上げ
+- 各サービスに同一HTTPリクエストを発行。 (net/http/httptest)
+- 各コンテナ内で出力されたログを比較
+
+手元 & CIでPHP版と振る舞いを比較可能に。あとはCanaryサーバに乗せて様子をみる。
+
+* 例: 管理API系統
+
+管理系統の巨大なPHPモノリスから少しずつAPIベースな設計に移行中。
+
+前準備
+
+消せるコード・消せる画面・消せる機能はどんどん消していく。
+
+.link https://speakerdeck.com/suzuken/phpcon2017 広告配信管理システムを支えるPHP - レガシーシステムからの段階的移行戦略 / phpcon2017 by Kenta Suzuki
+
+手順
+
+- 業務要件を洗い出す
+- Swagger定義をがんばって書く
+- [[https://github.com/go-swagger/go-swagger][go-swagger]]でサーバスタブを生成
+- あとはReduxから叩く
+
+* 他Go事例
+
+- 検索 + クローラ基盤（Go + Kinesis + Elasticsearch）
+- 既存のKVSをGoでwrapしたdaemon
+- 速報系データ収集基盤（Go + Kinesis + Elasticsearch + S3 + Athena）
+
+各自サブシステムをつくる流れ
+
+- デザインドキュメントをかく
+- github.com/voyagegroup にリポジトリつくってコードおく
+- [[https://suzuken.hatenablog.jp/entry/2015/12/18/150555][ArtifactをつくってS3におく]]
+- コンテナ基盤（新しいものはだいたいECS）に放り込む or TerraformリポジトリにPull Requestおくって構成つくって放り込む
+
