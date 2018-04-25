@@ -1,0 +1,191 @@
+ディスプレイ広告とITP
+https://web-study.connpass.com/event/84158/
+19:30 25 Apr 2018
+
+Kenta SUZUKI
+Software Engineer at VOYAGE GROUP
+@suzu_v
+https://github.com/suzuken
+
+* 今日のテーマ
+
+- ITPによりディスプレイ広告が受けた影響
+- ITPによる広告の変化
+- ディスカッション: 利便性とセキュリティ
+
+* ITPは何のためにあるか
+
+> Many users feel that trust is broken when they are being tracked and privacy-sensitive data about their web activity is acquired for purposes that they never agreed to.
+
+.link https://webkit.org/blog/7675/intelligent-tracking-prevention/
+
+つまり、ブラウザが3rd party cookieの挙動として「破壊して良いもの」を判別し、制御する。
+
+広告システムベンダーは、なぜWebKitがこのような取り組みに至ったのかを知り、反省すべき。
+
+* ディスプレイ広告での3rd party cookie利用 (SSP, DSP間)
+
+.image http://www.adopsinsider.com/wp-content/uploads/2011/05/cookie-syncing.png
+.caption 出典 [[http://www.adopsinsider.com/ad-exchanges/cookie-syncing/]]
+
+* Cookie Sync
+
+- 実例（デモ）
+- 「広告会社Bからは媒体社AのIDはわからない」
+- 広告会社のドメインを直接訪問するユーザはまずいない = 3rd party cookieとして書く
+
+.link http://d.hatena.ne.jp/mala/20111202/1322835191 サードパーティCookieの歴史と現状 Part3 広告における利用、トラッキング、ターゲティング広告におけるプライバシーリスク
+
+ディスプレイ広告のエコシステムは3rd party cookieに依存している。
+
+* ITPと広告業界へのインパクト
+
+直接的な影響
+
+- 実質的に3rd party cookieによるターゲティングがSafariでできなくなることによるeCPM（広告表示ごとの期待収益）の低下
+
+市場への影響
+
+- [[https://www.criteo.com/jp/news/press-releases/2017/11/criteo%E3%80%812017%E5%B9%B4%E7%AC%AC%EF%BC%93%E5%9B%9B%E5%8D%8A%E6%9C%9F%E3%81%AE%E6%A5%AD%E7%B8%BE%E3%82%92%E7%99%BA%E8%A1%A8/][Criteo 2017 Q3 8-10%のnegativeな影響]]
+- 2017/09: [[http://www.adweek.com/digital/every-major-advertising-group-is-blasting-apple-for-blocking-cookies-in-the-safari-browser/][Every Major Advertising Group Is Blasting Apple for Blocking Cookies in the Safari Browser]]
+
+* ITPでの対応
+
+* ITPで考えられる対応
+
+- そもそもiOS Safariでターゲティングを諦める
+
+or
+
+- 1st party cookieを使う
+- Super Cookie (evil)
+
+* とてもざっくりいうと
+
+- ITPはどのサイトでも多数cookie sync requestが飛ぶのを防ぐためにWebKitが提案したと思っていい: バッテリー食う、重い、ギガも少し減る
+- 3rd party cookieを利用し、Originをまたいでユーザ行動をトラッキングすることは事実上できなくなった
+
+そもそもITP以前も3rd party cookieはSafariにおいて「ブロックはするけど送信はする」状態だった。なのでもともと、リダイレクタで1st party cookieとして焼かないとトラッキング用途にはつかえない。
+
+    publisher.com (1st party) -> adexample.com (リダイレクタ) -> LP
+                                      ^
+                                ここで1st partyとしてcookieを焼く
+
+ITP環境化だと、そもそもトラッキング用ドメインとみなされると24時間経過すると3rd partyコンテキストからはcookieが読めなくなる。
+
+* ITP環境下での3rd party cookieの振る舞い
+
+- もともと多くの広告システムではリダイレクト時に1st party cookieとして広告業者のdomainでcookieを焼いて、それを3rd party cookieとして読み込んでいた
+- のだけど、ITPだとインタラクションのないcookieについてはpurgeされるようになったのでこの手は実質無効化
+
+1st party cookieとして利用されていれば、24時間は3rd party contextからでもアクセス可能。30日たてばcookieごと消される。
+
+つまり、domainまたいだtrackingは実質できなくなった。ちなみにoptoutもcookieでやるとpurgeされるので3rd party cookieでは基本的にできない。
+
+.link https://www.sizmek.com/blog/understanding-safari-intelligent-tracking-prevention-itp/
+
+アドミュート（「この広告は出さないでほしい」機能）も3rd party cookieではできなくなった。
+
+* オプトアウト: お手元の端末で
+
+.link http://www.ddai.info/optout
+
+3rd party cookieの書き込みがブロックされているブラウザだとオプトアウトされない。
+また、オプトアウトできても、ITP対象ドメインになっている場合にはPurge時にオプトアウトも無効化される。
+
+.link http://www.aboutads.info/choices/
+
+* ITPの影響をうけない広告システム
+
+- 1st partyをつかうtracking (ex. Google Analytics)
+- 広告システムと同じoriginで媒体をサーブしている場合 例: facebook.com
+
+ITP以前、Safariでの3rd party cookieブロック時にも同様の議論をしていた。
+
+つまり、1st party cookieをセットする機会の多いプレイヤーが優位。
+
+* Super Cookie: HSTS Pinning
+
+Cookie的に振る舞う、Cookieの代替え。
+
+- Strict-Transport-SecurityヘッダがついているWebサイトを記憶し、次回のHTTPリクエストをブラウザ側で判断し、HTTPSでつなぎにいく
+
+.link https://github.com/ben174/hsts-cookie
+
+最近WebKitにもHSTS abuse対策が入る予定。
+
+.link https://webkit.org/blog/8146/protecting-against-hsts-abuse/
+
+他のSuper Cookie例は [[https://github.com/samyk/evercookie]] あたりを参考
+
+* Super Cookieはよいか？
+
+- evil
+- 広告事業者はトラッキング用途にSuper Cookieを使うべきではない
+- なぜか: ユーザはSuper Cookieを適切に事業者が扱っていることを、振る舞いから推測するしかない
+
+ユーザがデータの破棄を明示しても、Super Cookieでtrackingされている場合には事業者側の実装に完全に依存する。
+
+通常のHTTP Cookieであれば、
+
+- ユーザはCookieを明示的に破棄できる
+- 特定のHostからのCookieを受け入れないようにクライアント側で設定できる
+
+evilな目的でSuper Cookieが使われると、ユーザは避けようがない。
+もし使う場合には、ユーザの意図を尊重しなければならない。
+
+* fingerprinting
+
+匿名データをもとにブラウザのuniquenessを推定する技術
+
+.link https://panopticlick.eff.org/
+
+- 利用データ: Canvas, スクリーンサイズ, ブラウザプラグイン, WebGL, フォント etc.
+- ユーザはトラッキングされていることに（振る舞いから推測しなければ）気がつかない。
+- Super Cookieと同様、データの破棄は事業者側の実装に依存する。
+
+SafariではUA freezeでfingerprintingの精度を低める流れ。
+
+.link https://blog.jxck.io/entries/2018-01-17/freezing-user-agent-string.html
+
+Canvas Fingerprintingの例
+
+.link https://browserleaks.com/canvas
+
+* ディスカッション: プライバシーとディスプレイ広告
+
+* 世界の流れ
+
+- DNT
+- ITP
+- GDPR [[https://www.eugdpr.org/]]
+
+Webでの個人データ利用は、個人の権利を許可し保障する方向で進んでいる。
+規制の整備は、消費者の信頼を回復し、健全な競争を促す。
+
+* IDについて: 3rd party cookie, 広告ID
+
+- アプリではiOS, Android共に広告IDがある
+- ユーザが明示的に広告IDを使えないようにできる + IDをリセット可能
+
+ユーザの利便性と透明性の観点から
+
+- 広告IDはアプリを横断しても固定。広告用途のIDであり（ログインなどで利用されず）、明示的にオプトアウトできるIDは受け入れられるか？
+- Webで広告IDな成り立つか？
+- プラットフォーム非依存な広告IDは成り立つか？
+
+* 経済性とエコシステム
+
+- 3rd party cookieは既にいろんなところでつかわれている
+- 広告システムはこれをトラッキング用途で使いすぎた
+
+ITPを受けて
+
+- 1st party cookieで戦えない広告事業者はevilな手段を使ってしまう方向に倒れていくのか？
+- Webでも広告IDのように、ユーザの利便性を担保したトラッキング機構を作ることは可能か？
+
+今後
+
+- GDPR, ePrivacyを受けてディスプレイ広告のトラッキングは終焉を迎えるか？
+
+.link https://digiday.jp/publishers/winners-losers-eus-new-eprivacy-law/
